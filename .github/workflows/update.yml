@@ -1,0 +1,49 @@
+name: update-spx-options
+
+on:
+  schedule:
+    # CBOE 当天统计收盘后发布；分钟故意选冷门值，避开 GitHub 整刻钟的排队高峰
+    - cron: "37 1 * * 2-6"    # 北京时间 09:37（美东前一日晚间）
+    - cron: "47 9 * * 2-6"    # 北京时间 17:47，兜底再抓一次
+  workflow_dispatch:
+
+# 同一时间只跑一个：GitHub 定时任务常被攒到一起同时触发，排队执行可避免两个任务同时推送互相撞车
+concurrency:
+  group: update-spx-options
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r scripts/requirements.txt
+      - name: 下载 CBOE 每日期权统计（增量，只补缺的日子）
+        id: cboe
+        continue-on-error: true
+        run: python scripts/fetch_cboe.py
+      - name: 抓取标普 500 指数日线（Yahoo，失败只告警）
+        continue-on-error: true
+        run: python scripts/fetch_price.py
+      - name: 生成页面数据
+        run: python scripts/build.py
+      - name: Commit
+        run: |
+          git config user.name "spx-bot"
+          git config user.email "spx-bot@users.noreply.github.com"
+          git add data/ index.html
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "update SPX options $(date -u +%F)"
+            git pull --rebase
+            git push
+          fi
+      - name: CBOE 下载失败时把任务标红
+        if: steps.cboe.outcome == 'failure'
+        run: exit 1
