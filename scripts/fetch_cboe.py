@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """下载 CBOE 每日期权市场统计（每个交易日一份 JSON，2019-10-07 起），提取 标普 500 期权（SPX + SPXW）和 指数期权（全部指数期权合计）的
-看涨/看跌 成交量与持仓量，增量写入 data/cboe_daily.csv。已有的日期不再下载；周末、假日没有文件（403/404）自动跳过。
+看涨/看跌 成交量与持仓量（另含"个股期权"合计），增量写入 data/cboe_daily.csv。已有的日期不再下载；周末、假日没有文件（403/404）自动跳过。
   python scripts/fetch_cboe.py            增量更新（只补缺的日子）
   python scripts/fetch_cboe.py --full     从头重新下载
 """
@@ -15,7 +15,7 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 OUT = DATA / "cboe_daily.csv"
 URL = "https://cdn.cboe.com/data/us/options/market_statistics/daily/{d}_daily_options"
 START = dt.date(2019, 10, 7)
-FIELDS = ["date", "spx_call_vol", "spx_put_vol", "spx_call_oi", "spx_put_oi", "idx_call_vol", "idx_put_vol", "idx_call_oi", "idx_put_oi"]
+FIELDS = ["date", "spx_call_vol", "spx_put_vol", "spx_call_oi", "spx_put_oi", "idx_call_vol", "idx_put_vol", "idx_call_oi", "idx_put_oi", "eq_call_vol", "eq_put_vol", "eq_call_oi", "eq_put_oi"]
 
 
 def one(d: dt.date):
@@ -41,8 +41,10 @@ def one(d: dt.date):
         raise KeyError(keys)
     sv, so = pick("SPX + SPXW", "SPX")
     iv, io = pick("INDEX OPTIONS")
+    ev, eo = pick("EQUITY OPTIONS")
     return {"date": d.isoformat(), "spx_call_vol": sv["call"], "spx_put_vol": sv["put"], "spx_call_oi": so["call"], "spx_put_oi": so["put"],
-            "idx_call_vol": iv["call"], "idx_put_vol": iv["put"], "idx_call_oi": io["call"], "idx_put_oi": io["put"]}
+            "idx_call_vol": iv["call"], "idx_put_vol": iv["put"], "idx_call_oi": io["call"], "idx_put_oi": io["put"],
+            "eq_call_vol": ev["call"], "eq_put_vol": ev["put"], "eq_call_oi": eo["call"], "eq_put_oi": eo["put"]}
 
 
 def main() -> None:

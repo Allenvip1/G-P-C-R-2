@@ -24,8 +24,10 @@ def main() -> None:
     out = {"updated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
     out["price"] = [[r["date"], float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"])] for r in rd("price_spx.csv") if r["date"] >= START]
     out["es"] = [[r["date"], float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"])] for r in rd("price_es.csv") if r["date"] >= START]
-    keys = ["spx_call_vol", "spx_put_vol", "spx_call_oi", "spx_put_oi", "idx_call_vol", "idx_put_vol", "idx_call_oi", "idx_put_oi"]
-    out["cboe"] = [[r["date"]] + [int(r[k]) for k in keys] for r in rd("cboe_daily.csv")]
+    keys = ["spx_call_vol", "spx_put_vol", "spx_call_oi", "spx_put_oi", "idx_call_vol", "idx_put_vol", "idx_call_oi", "idx_put_oi", "eq_call_vol", "eq_put_vol", "eq_call_oi", "eq_put_oi"]
+    # 休市日（如 2025-01-09 全美休市）CBOE 仍会放一份成交量全为 0 的文件，比值无意义，跳过
+    vol_keys = [k for k in keys if k.endswith("_vol")]
+    out["cboe"] = [[r["date"]] + [int(r[k]) for k in keys] for r in rd("cboe_daily.csv") if all(int(r[k]) > 0 for k in vol_keys)]
     html = HTML.read_text(encoding="utf-8")
     old = re.search(r'<script id="spx-data">window\.SPX_DATA=(.*?);</script>', html, flags=re.S)
     if old:
