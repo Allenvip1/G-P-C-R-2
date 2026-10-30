@@ -23,6 +23,7 @@ def rd(name):
 def main() -> None:
     out = {"updated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
     out["price"] = [[r["date"], float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"])] for r in rd("price_spx.csv") if r["date"] >= START]
+    out["es"] = [[r["date"], float(r["open"]), float(r["high"]), float(r["low"]), float(r["close"])] for r in rd("price_es.csv") if r["date"] >= START]
     keys = ["spx_call_vol", "spx_put_vol", "spx_call_oi", "spx_put_oi", "idx_call_vol", "idx_put_vol", "idx_call_oi", "idx_put_oi"]
     out["cboe"] = [[r["date"]] + [int(r[k]) for k in keys] for r in rd("cboe_daily.csv")]
     html = HTML.read_text(encoding="utf-8")
@@ -40,7 +41,7 @@ def main() -> None:
     if n != 1:
         raise SystemExit('index.html 里没找到 <script id="spx-data">')
     HTML.write_text(new, encoding="utf-8")
-    print(f"【成功】已写入 index.html：价格 {len(out['price'])} 天，期权 {len(out['cboe'])} 天")
+    print(f"【成功】已写入 index.html：指数 {len(out['price'])} 天，ES {len(out['es'])} 天，期权 {len(out['cboe'])} 天")
 
 
 if __name__ == "__main__":
